@@ -93,7 +93,7 @@ def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, km
     url_completa = url_base + urllib.parse.urlencode(parametros)
     response = requests.get(url_completa)
     data = response.json()
-    df = pd.DataFrame(data['data'])
+    df = pd.DataFrame(data['pills'])
     df = df[['price', 'make', 'model', 'fuel', 'cv', 'km', 'year', 'url']]
     return df
 
@@ -109,6 +109,12 @@ def main_function():
     priceMax = int(input("Enter max price: "))
     df = search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
 
+    df['price'] = pd.to_numeric(df['price'], errors='coerce')
+    df['year'] = pd.to_numeric(df['year'], errors='coerce')
+    df['km'] = pd.to_numeric(df['km'], errors='coerce')
+
+    df = df.dropna(subset=['price', 'year', 'km'])
+    
     df['score'] = 0.8 * df['price'] - 0.5 * df['year'] + 0.3 * df['km']
 
     df = df.sort_values(by='score', ascending=False)
