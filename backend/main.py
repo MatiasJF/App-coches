@@ -119,11 +119,12 @@ async def main_function():
     df['year'] = pd.to_numeric(df['year'], errors='coerce')
     df['km'] = pd.to_numeric(df['km'], errors='coerce')
     df = df.dropna(subset=['price', 'year', 'km'])
-
     df['score'] = 0.8 * df['price'] - 0.5 * df['year'] + 0.3 * df['km']
+    df['score'] = (df['score'] - df['score'].min()) / (df['score'].max() - df['score'].min())
+
 
     df = df.sort_values(by='score', ascending=False)
-    fig = px.scatter(df, x='price', y='km', color='year', size='score', hover_data=['year', 'km', 'price'])
+    fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
 
     fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['url'])
     fig.update_traces(hoverinfo='skip', selector=dict(mode='markers'))
