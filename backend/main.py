@@ -97,7 +97,6 @@ async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: i
     if df.empty:
         print('No data found')
         return
-    print(df.info())
     df = df[['price', 'year', 'km', 'make', 'model', 'fuel', 'cv', 'url', 'pollutionTag']]
     return df
 
@@ -112,7 +111,7 @@ async def main_function():
     priceMin = int(input("Enter min price: "))
     priceMax = int(input("Enter max price: "))
     df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
-    print(df.info(), 'info')
+    print('Encontrados ' + str(len(df)) + ' coches')
     df['price'] = df['price'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
     df['year'] = df['year'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
     df['km'] = df['km'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
@@ -137,9 +136,9 @@ async def main_function():
                 import webbrowser
                 webbrowser.open(url)
 
-    fig.for_each_trace(update_url)
+    for trace in fig.data:
+        trace.on_click(update_url)
 
-    fig.show()
 
     df_html = df.to_html(index=False)
 
