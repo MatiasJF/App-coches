@@ -3,8 +3,10 @@ import pandas as pd
 import urllib.parse
 import matplotlib.pyplot as plt
 import plotly.express as px
+from IPython.display import HTML
 import csv
 import bcrypt
+import asyncio
 
 
 class User():
@@ -27,8 +29,6 @@ def register(user: User):
     salt = bcrypt.gensalt()
     # Hashea la contraseña con la sal
     hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), salt)
-    print(hashed_password)
-    print(salt)
     with open('users.csv', 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([user.username, salt, hashed_password])
@@ -50,7 +50,7 @@ def login(user: User):
             u2 = u2.decode('utf-8')[2:-1].encode('utf-8')
             if hashed_password == u2:
                 print("User logged in")
-                main_function()
+                asyncio.run(main_function())
                 return
             else:
                 print("Invalid password")
@@ -60,7 +60,7 @@ def login(user: User):
 
 
 
-def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
+async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     parametros = {
         'tipo_busqueda': '2',
         'seminuevo': '0',
@@ -87,18 +87,22 @@ def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, km
         'agent_type_name': '',
         'has_financing': '',
         'reservable': '',
-        'search3': model + ' ' + make,
+        'search3': model,
     }
     url_base = 'https://www.coches.com/api/vo/pills/?'
     url_completa = url_base + urllib.parse.urlencode(parametros)
     response = requests.get(url_completa)
     data = response.json()
     df = pd.DataFrame(data['pills'])
-    df = df[['price', 'make', 'model', 'fuel', 'cv', 'km', 'year', 'url']]
+    if df.empty:
+        print('No data found')
+        return
+    print(df.info())
+    df = df[['price', 'year', 'km', 'make', 'model', 'fuel', 'cv', 'url', 'pollutionTag']]
     return df
 
 
-def main_function():
+async def main_function():
     make = input("Enter make: ")
     model = input("Enter model: ")
     yearMin = int(input("Enter min year: "))
@@ -107,25 +111,46 @@ def main_function():
     kmMax = int(input("Enter max km: "))
     priceMin = int(input("Enter min price: "))
     priceMax = int(input("Enter max price: "))
-    df = search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-
+    df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
+    print(df.info(), 'info')
+    df['price'] = df['price'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
+    df['year'] = df['year'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
+    df['km'] = df['km'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
     df['price'] = pd.to_numeric(df['price'], errors='coerce')
     df['year'] = pd.to_numeric(df['year'], errors='coerce')
     df['km'] = pd.to_numeric(df['km'], errors='coerce')
-
     df = df.dropna(subset=['price', 'year', 'km'])
-    
+
     df['score'] = 0.8 * df['price'] - 0.5 * df['year'] + 0.3 * df['km']
 
     df = df.sort_values(by='score', ascending=False)
+    fig = px.scatter(df, x='price', y='km', color='year', size='score', hover_data=['year', 'km', 'price'])
 
-    html_table = df.to_html()
+    fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['url'])
+    fig.update_traces(hoverinfo='skip', selector=dict(mode='markers'))
+    fig.update_layout(clickmode='event+select')
 
-    fig = px.scatter(df, x='km', y='price', color='year', hover_data=['make', 'model', 'url'])
-    fig.update_traces(marker=dict(size=12, opacity=0.8))
-    fig.update_layout(title='Car Search Results', xaxis_title='Kilometers', yaxis_title='Price')
+    def update_url(trace, points, selector):
+        if points.point_inds:
+            url = trace.customdata[points.point_inds[0]]
+            if url:
+                import webbrowser
+                webbrowser.open(url)
+
+    fig.for_each_trace(update_url)
+
     fig.show()
-    print(html_table)
+
+    df_html = df.to_html(index=False)
+
+    html_with_data = df_html.replace('<tbody>', '<tbody>' + ''.join([f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5]}</td><td>{row[6]}</td><td><a href="{row[7]}">{row[7]}</a></td><td>{row[8]}</td><td>{row[9]}<td></tr>' for row in df.values]))
+
+    combined_html = f"<h1>DataFrame</h1>{html_with_data}<h1>Scatter Plot</h1>{fig.to_html()}"
+
+    with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
+        f.write(combined_html)
+
+    HTML('combined_cars_data.html')
     return
 
 
