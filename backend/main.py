@@ -92,6 +92,7 @@ async def get_data_coches_com(make: str, model: str, yearMin: int, yearMax: int,
     response = requests.get(url_completa)
     data = response.json()
     df = pd.DataFrame(data['pills'])
+    print(df.columns)
     return df
 async def get_data_coches_net(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     parametros = {
@@ -109,30 +110,45 @@ async def get_data_coches_net(make: str, model: str, yearMin: int, yearMax: int,
     response = requests.get(url_completa)
     data = response.json()
     df = pd.DataFrame(data['pills'])
+    # print(df.columns)
     return df
 
 async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     parametros = {
-        'make': make,
-        'model': model,
-        'yearMin': yearMin,
-        'yearMax': yearMax,
-        'kmMin': kmMin,
-        'kmMax': kmMax,
-        'priceMin': priceMin,
-        'priceMax': priceMax,
-    }
-    url_base = 'https://es.wallapop.com/search?'
+    'filters_source': 'suggester',
+    'keywords': make + ' ' + model,
+    'category_ids': 100,
+    'longitude': -3.69196,
+    'latitude': 40.41956,
+    'yearMin': yearMin,
+    'yearMax': yearMax,
+    'kmMin': kmMin,
+    'kmMax': kmMax,
+    'priceMin': priceMin,
+    'priceMax': priceMax
+}
+    url_base = 'https://api.wallapop.com/api/v3/cars/search?'
     url_completa = url_base + urllib.parse.urlencode(parametros)
     response = requests.get(url_completa)
-    data = response.json()
-    df = pd.DataFrame(data['pills'])
-    return df
+    print(response)
+    df = pd.DataFrame()
+    if response.ok:
+        try:
+            data = response.json()
+            rows = []
+            for obj in data['search_objects']:
+                row = obj['content']
+                rows.append(row)
 
+            df = pd.DataFrame(rows)
+        except Exception as e:
+            print("Error:", e)
+    # print(df.columns)
+    return df
 async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     # df2 = get_data_coches_net(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-    # df3 = get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
+    df3 = await get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     if df.empty:
         print('No data found')
         return
