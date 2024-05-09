@@ -201,6 +201,77 @@ async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: i
     df = transform_data(df , df3)
     return df
 
+def generate_html_file(df_html, scatter_plot_html):
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Combined Cars Data</title>
+        <style>
+        body {{
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+
+        h1 {{
+            text-align: center;
+            color: #333;
+        }}
+
+        table {{
+            width: 80%;
+            border-collapse: collapse;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }}
+
+        th,
+        td {{
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }}
+
+        th {{
+            background-color: #f2f2f2;
+        }}
+
+        tr:hover {{
+            background-color: #f5f5f5;
+        }}
+
+        .scatter-plot {{
+            width: 80%;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }}
+    </style>
+
+    </head>
+    <body>
+        <h1>DataFrame</h1>
+        {df_html}
+        <h1>Scatter Plot</h1>
+        <div class="scatter-plot">
+            {scatter_plot_html}
+        </div>
+    </body>
+    </html>
+    """
+
+    with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+    webbrowser.open('combined_cars_data.html')
+
+
 
 async def main_function():
     while True:
@@ -248,12 +319,7 @@ async def main_function():
 
             df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
             df_html = df.to_html(index=False,  escape=False)
-
-            combined_html = f"<h1>DataFrame</h1>{df_html}<h1>Scatter Plot</h1>{fig.to_html()}"
-
-            with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
-                f.write(combined_html)
-                webbrowser.open('combined_cars_data.html')
+            generate_html_file(df_html, fig.to_html())
         except ValueError as ve:
             print(f"Invalid input: {ve}")
 
