@@ -36,7 +36,6 @@ def register(user: User):
     print("User registered")
     return
 
-
 async def login(user: User):
     with open('users.csv', 'r') as file:
         reader = csv.reader(file)
@@ -51,9 +50,9 @@ async def login(user: User):
             u2 = u2.decode('utf-8')[2:-1].encode('utf-8')
             if hashed_password == u2:
                 print("User logged in")
-                web = await main_function()
-                webbrowser.open(web)
+                await main_function()
                 return
+
             else:
                 print("Invalid password")
                 return
@@ -196,51 +195,78 @@ async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, k
 async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df3 = await get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-    df = transform_data(df , df3)
     if len(df) == 0:
         print('No data found')
         return
+    df = transform_data(df , df3)
     return df
 
 
 async def main_function():
-    make = input("Enter make: ")
-    model = input("Enter model: ")
-    yearMin = int(input("Enter min year: "))
-    yearMax = int(input("Enter max year: "))
-    kmMin = int(input("Enter min km: "))
-    kmMax = int(input("Enter max km: "))
-    priceMin = int(input("Enter min price: "))
-    priceMax = int(input("Enter max price: "))
-    df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
-    print('Encontrados ' + str(len(df)) + ' coches')
+    while True:
+        try:
+            make = input("Elige la marca (e.g., Audi): ")
+            model = input("Elige el modelo (e.g., A3): ")
+            yearMin = int(input("Elige el año mínimo (e.g., 2000): "))
+            yearMax = int(input("Elige el año máximo (e.g., 2022): "))
+            kmMin = int(input("Elije el minimo kilometraje (e.g., 0): "))
+            kmMax = int(input("Elije el maximo kilometraje (e.g., 1000000): "))
+            priceMin = int(input("Elije el precio mínimo (e.g., 0): "))
+            priceMax = int(input("Elige el precio máximo (e.g., 100000): "))
 
-    df = df.sort_values(by='score', ascending=False)
-    fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
+            if yearMin < 0 or yearMax < 0 or kmMin < 0 or kmMax < 0 or priceMin < 0 or priceMax < 0:
+                raise ValueError("Los valores de precio, año y kilometraje no pueden ser negativos.")
+            if yearMin > yearMax:
+                raise ValueError("El año minimo no puede ser mayor que el año maximo.")
+            if kmMin > kmMax:
+                raise ValueError("El kilometro minimo no puede ser mayor que el kilometro maximo.")
+            if priceMin > priceMax:
+                raise ValueError("El precio minimo no puede ser mayor que el precio maximo.")
+            df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
 
-    fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['image'])
-    fig.update_traces(hoverinfo='skip', selector=dict(mode='markers'))
-    fig.update_layout(clickmode='event+select')
+            df = df[(df['make'].str.lower().str.contains(make.lower())) & (df['model'].str.lower().str.contains(model.lower()))]
 
-    def update_url(trace, points, selector):
-        if points.point_inds:
-            url = trace.customdata[points.point_inds[0]]
-            if url:
-                import webbrowser
-                webbrowser.open(url)
+            print('Encontrados ' + str(len(df)) + ' coches')
+            if len(df) == 0:
+                raise ValueError("No se han encontrado coches con los criterios seleccionados.")
+            df = df.sort_values(by='score', ascending=False)
+            fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
 
-    for trace in fig.data:
-        trace.on_click(update_url)
+            fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['image'])
+            fig.update_traces(hoverinfo='skip', selector=dict(mode='markers'))
+            fig.update_layout(clickmode='event+select')
 
-    df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
-    df_html = df.to_html(index=False,  escape=False)
+            def update_url(trace, points, selector):
+                if points.point_inds:
+                    url = trace.customdata[points.point_inds[0]]
+                    if url:
+                        import webbrowser
+                        webbrowser.open(url)
 
-    combined_html = f"<h1>DataFrame</h1>{df_html}<h1>Scatter Plot</h1>{fig.to_html()}"
+            for trace in fig.data:
+                trace.on_click(update_url)
 
-    with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
-        f.write(combined_html)
+            df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
+            df_html = df.to_html(index=False,  escape=False)
 
-    return 'combined_cars_data.html'
+            combined_html = f"<h1>DataFrame</h1>{df_html}<h1>Scatter Plot</h1>{fig.to_html()}"
+
+            with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
+                f.write(combined_html)
+                webbrowser.open('combined_cars_data.html')
+        except ValueError as ve:
+            print(f"Invalid input: {ve}")
+
+        webbrowser.open('combined_cars_data.html')
+        print("1. Logout")
+        print("2. Continuar Buscando")
+        option = input("Elige una opción: ")
+        if option == "1":
+            return
+        if option == "2":
+            web = await main_function()
+        else:
+            return
 
 
 async def main_menu():
