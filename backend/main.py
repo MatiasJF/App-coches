@@ -58,6 +58,55 @@ def login(user: User):
     print("User not registered")
     return
 
+def get_url_walla(id):
+
+    return
+
+def get_url_com(id):
+    return
+
+def transform_data(df_com, df_walla):
+    same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower']
+    same_columns_coches_com = ['id','image', 'price', 'url' , 'make', 'model' , 'fuel', 'cv', 'km', 'year']
+    comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv','url']
+    rename_columns = {
+        'engine': 'fuelType',
+        'fuel' : 'fuelType',
+        'horsepower': 'cv',
+        'brand' : 'make',
+        'images': 'image',
+        'url': 'link'
+    }
+    delete_columns = ['title']
+    df_walla['images'] = df_walla['images'].apply(lambda x: x[0]['original'] if isinstance(x, list) and len(x) > 0 else None)
+    df_walla.rename(columns=rename_columns, inplace=True)
+
+    df_walla.drop(columns=delete_columns, inplace=True, errors='ignore')
+
+    df_com.rename(columns=rename_columns, inplace=True)
+
+    df_com.drop(columns=delete_columns, inplace=True, errors='ignore')
+
+    df_walla = df_walla[[col for col in comon_names if col in df_walla.columns]]
+    df_com = df_com[[col for col in comon_names if col in df_com.columns]]
+
+    df_walla['site'] = 'walla'
+
+    df_com['site'] = 'com'
+
+    df = df_concatenated = pd.concat([df_walla, df_com], ignore_index=True)
+    df['price'] = df['price'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
+    df['year'] = df['year'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
+    df['km'] = df['km'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
+    df['price'] = pd.to_numeric(df['price'], errors='coerce')
+    df['year'] = pd.to_numeric(df['year'], errors='coerce')
+    df['km'] = pd.to_numeric(df['km'], errors='coerce')
+    df = df.dropna(subset=['price', 'year', 'km'])
+    df['score'] = 0.8 * df['price'] - 0.5 * df['year'] + 0.3 * df['km']
+    df['score'] = (df['score'] - df['score'].min()) / (df['score'].max() - df['score'].min())
+
+
+
 async def get_data_coches_com(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     parametros = {
         'tipo_busqueda': '2',
@@ -145,14 +194,14 @@ async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, k
             print("Error:", e)
     # print(df.columns)
     return df
+
 async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-    # df2 = get_data_coches_net(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df3 = await get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
+    df = transform_data(df , df3)
     if df.empty:
         print('No data found')
         return
-    df = df[['price', 'year', 'km', 'make', 'model', 'fuel', 'cv', 'url', 'pollutionTag']]
     return df
 
 
@@ -167,16 +216,6 @@ async def main_function():
     priceMax = int(input("Enter max price: "))
     df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
     print('Encontrados ' + str(len(df)) + ' coches')
-    df['price'] = df['price'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
-    df['year'] = df['year'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
-    df['km'] = df['km'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
-    df['price'] = pd.to_numeric(df['price'], errors='coerce')
-    df['year'] = pd.to_numeric(df['year'], errors='coerce')
-    df['km'] = pd.to_numeric(df['km'], errors='coerce')
-    df = df.dropna(subset=['price', 'year', 'km'])
-    df['score'] = 0.8 * df['price'] - 0.5 * df['year'] + 0.3 * df['km']
-    df['score'] = (df['score'] - df['score'].min()) / (df['score'].max() - df['score'].min())
-
 
     df = df.sort_values(by='score', ascending=False)
     fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
@@ -198,7 +237,7 @@ async def main_function():
 
     df_html = df.to_html(index=False)
 
-    html_with_data = df_html.replace('<tbody>', '<tbody>' + ''.join([f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5]}</td><td>{row[6]}</td><td><a href="{row[7]}">{row[7]}</a></td><td>{row[8]}</td><td>{row[9]}<td></tr>' for row in df.values]))
+    # html_with_data = df_html.replace('<tbody>', '<tbody>' + ''.join([f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5]}</td><td>{row[6]}</td><td><a href="{row[7]}">{row[7]}</a></td><td>{row[8]}</td><td>{row[9]}<td></tr>' for row in df.values]))
 
     combined_html = f"<h1>DataFrame</h1>{html_with_data}<h1>Scatter Plot</h1>{fig.to_html()}"
 
