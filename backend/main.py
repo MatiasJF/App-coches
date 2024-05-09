@@ -70,7 +70,7 @@ def get_url_com(id):
 def transform_data(df_com, df_walla):
     same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower']
     same_columns_coches_com = ['id','image', 'price', 'url' , 'make', 'model' , 'fuel', 'cv', 'km', 'year']
-    comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv','url']
+    comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv']
     rename_columns = {
         'engine': 'fuelType',
         'fuel' : 'fuelType',
@@ -79,7 +79,7 @@ def transform_data(df_com, df_walla):
         'images': 'image',
         'url': 'link'
     }
-    delete_columns = ['title']
+    delete_columns = ['title', 'url']
     df_walla['images'] = df_walla['images'].apply(lambda x: x[0]['original'] if isinstance(x, list) and len(x) > 0 else None)
     df_walla.rename(columns=rename_columns, inplace=True)
 
@@ -91,21 +91,16 @@ def transform_data(df_com, df_walla):
 
     df_walla = df_walla[[col for col in comon_names if col in df_walla.columns]]
     df_com = df_com[[col for col in comon_names if col in df_com.columns]]
-
     df_walla['site'] = 'walla'
-
     df_com['site'] = 'com'
-
-    df = df_concatenated = pd.concat([df_walla, df_com], ignore_index=True)
-    df['price'] = df['price'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
-    df['year'] = df['year'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
-    df['km'] = df['km'].str.replace('€', '').str.replace('.', '').str.replace(',', '.')
-    df['price'] = pd.to_numeric(df['price'], errors='coerce')
-    df['year'] = pd.to_numeric(df['year'], errors='coerce')
-    df['km'] = pd.to_numeric(df['km'], errors='coerce')
-    df = df.dropna(subset=['price', 'year', 'km'])
-    df['score'] = 0.8 * df['price'] - 0.5 * df['year'] + 0.3 * df['km']
-    df['score'] = (df['score'] - df['score'].min()) / (df['score'].max() - df['score'].min())
+    print(len(df_walla)), print(len(df_com))
+    df = pd.concat([df_com, df_walla], ignore_index=True)
+    df['price'] = df['price'].fillna(0).replace({'\€': '', '\.': '', ',': ''}, regex=True).astype(int)
+    df['km'] = df['km'].fillna(0).replace({'\€': '', '\.': '', ',': ''}, regex=True).astype(int)
+    df['year'] = df['year'].fillna(0).astype(int)
+    score = (df['price'] - df['price'].mean()) / df['price'].std() + (df['km'] - df['km'].mean()) / df['km'].std() + (df['year'] - df['year'].mean()) / df['year'].std()
+    df['score'] = score
+    return df
 
 
 
@@ -141,10 +136,14 @@ async def get_data_coches_com(make: str, model: str, yearMin: int, yearMax: int,
     url_base = 'https://www.coches.com/api/vo/pills/?'
     url_completa = url_base + urllib.parse.urlencode(parametros)
     response = requests.get(url_completa)
-    data = response.json()
-    df = pd.DataFrame(data['pills'])
-    print(df.columns)
-    return df
+    df_com = pd.DataFrame()
+    if response.ok:
+        try:
+            data = response.json()
+            df_com = pd.DataFrame(data['pills'])
+        except Exception as e:
+            print("Error", e)
+    return df_com
 async def get_data_coches_net(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     parametros = {
         'make': make,
@@ -181,8 +180,7 @@ async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, k
     url_base = 'https://api.wallapop.com/api/v3/cars/search?'
     url_completa = url_base + urllib.parse.urlencode(parametros)
     response = requests.get(url_completa)
-    print(response)
-    df = pd.DataFrame()
+    df_walla = pd.DataFrame()
     if response.ok:
         try:
             data = response.json()
@@ -190,18 +188,16 @@ async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, k
             for obj in data['search_objects']:
                 row = obj['content']
                 rows.append(row)
-
-            df = pd.DataFrame(rows)
+            df_walla = pd.DataFrame(rows)
         except Exception as e:
             print("Error:", e)
-    # print(df.columns)
-    return df
+    return df_walla
 
 async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df3 = await get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df = transform_data(df , df3)
-    if df.empty:
+    if len(df) == 0:
         print('No data found')
         return
     return df
@@ -222,7 +218,7 @@ async def main_function():
     df = df.sort_values(by='score', ascending=False)
     fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
 
-    fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['url'])
+    fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['image'])
     fig.update_traces(hoverinfo='skip', selector=dict(mode='markers'))
     fig.update_layout(clickmode='event+select')
 
@@ -236,12 +232,10 @@ async def main_function():
     for trace in fig.data:
         trace.on_click(update_url)
 
+    df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
+    df_html = df.to_html(index=False,  escape=False)
 
-    df_html = df.to_html(index=False)
-
-    # html_with_data = df_html.replace('<tbody>', '<tbody>' + ''.join([f'<tr><td>{row[0]}</td><td>{row[1]}</td><td>{row[2]}</td><td>{row[3]}</td><td>{row[4]}</td><td>{row[5]}</td><td>{row[6]}</td><td><a href="{row[7]}">{row[7]}</a></td><td>{row[8]}</td><td>{row[9]}<td></tr>' for row in df.values]))
-
-    combined_html = f"<h1>DataFrame</h1>{html_with_data}<h1>Scatter Plot</h1>{fig.to_html()}"
+    combined_html = f"<h1>DataFrame</h1>{df_html}<h1>Scatter Plot</h1>{fig.to_html()}"
 
     with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
         f.write(combined_html)
@@ -249,7 +243,7 @@ async def main_function():
     return 'combined_cars_data.html'
 
 
-def main_menu():
+async def main_menu():
     while True:
         print("1. Register")
         print("2. Login")
@@ -264,7 +258,7 @@ def main_menu():
             username = input("Enter username: ")
             password = input("Enter password: ")
             user = User(username=username, password=password)
-            login(user)
+            await login(user)
         elif option == "3":
             break
         else:
