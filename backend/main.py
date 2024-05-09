@@ -4,6 +4,7 @@ import urllib.parse
 import matplotlib.pyplot as plt
 import plotly.express as px
 from IPython.display import HTML
+import webbrowser
 import csv
 import bcrypt
 import asyncio
@@ -36,7 +37,7 @@ def register(user: User):
     return
 
 
-def login(user: User):
+async def login(user: User):
     with open('users.csv', 'r') as file:
         reader = csv.reader(file)
         users = list(reader)
@@ -50,7 +51,8 @@ def login(user: User):
             u2 = u2.decode('utf-8')[2:-1].encode('utf-8')
             if hashed_password == u2:
                 print("User logged in")
-                asyncio.run(main_function())
+                web = await main_function()
+                webbrowser.open(web)
                 return
             else:
                 print("Invalid password")
@@ -244,8 +246,7 @@ async def main_function():
     with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
         f.write(combined_html)
 
-    HTML('combined_cars_data.html')
-    return
+    return 'combined_cars_data.html'
 
 
 def main_menu():
@@ -271,4 +272,4 @@ def main_menu():
 
 
 if __name__ == "__main__":
-    main_menu()
+   asyncio.run(main_menu())
