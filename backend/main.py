@@ -130,9 +130,9 @@ async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, k
     return df
 
 async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
-    df = get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-    df2 = get_data_coches_net(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-    df3 = get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
+    df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
+    # df2 = get_data_coches_net(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
+    # df3 = get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     if df.empty:
         print('No data found')
         return
