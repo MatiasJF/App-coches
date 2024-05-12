@@ -67,19 +67,21 @@ def get_url_com(id):
     return
 
 def transform_data(df_com, df_walla):
-    same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower']
+    same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower','web_slug']
     same_columns_coches_com = ['id','image', 'price', 'url' , 'make', 'model' , 'fuel', 'cv', 'km', 'year']
-    comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv']
+    comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv','url']
     rename_columns = {
+        'web_slug': 'url',
         'engine': 'fuelType',
         'fuel' : 'fuelType',
         'horsepower': 'cv',
         'brand' : 'make',
-        'images': 'image',
-        'url': 'link'
+        'images': 'image'
     }
-    delete_columns = ['title', 'url']
+    delete_columns = ['title']
     df_walla['images'] = df_walla['images'].apply(lambda x: x[0]['original'] if isinstance(x, list) and len(x) > 0 else None)
+    df_walla['web_slug'] = 'https://es.wallapop.com/item/' + df_walla['web_slug'].astype(str)
+
     df_walla.rename(columns=rename_columns, inplace=True)
 
     df_walla.drop(columns=delete_columns, inplace=True, errors='ignore')
@@ -90,12 +92,17 @@ def transform_data(df_com, df_walla):
 
     df_walla = df_walla[[col for col in comon_names if col in df_walla.columns]]
     df_com = df_com[[col for col in comon_names if col in df_com.columns]]
-    df_walla['site'] = 'walla'
-    df_com['site'] = 'com'
-    print(len(df_walla)), print(len(df_com))
+
+    df_walla['site'] = 'WallaPop'
+
+    df_com['site'] = 'Coches.com'
+
     df = pd.concat([df_com, df_walla], ignore_index=True)
-    df['price'] = df['price'].fillna(0).replace({'\€': '', '\.': '', ',': ''}, regex=True).astype(int)
-    df['km'] = df['km'].fillna(0).replace({'\€': '', '\.': '', ',': ''}, regex=True).astype(int)
+    df['price'] = df['price'].fillna(0).replace({'€': '', '.': '', ',': '', '': 0}, regex=True)
+    df['km'] = df['km'].fillna(0).replace({'€': '', '.': '', ',': '','': 0 }, regex=True)
+    # pass price and km to numeric
+    df['price'] = pd.to_numeric(df['price'], errors='coerce')
+    df['km'] = pd.to_numeric(df['km'], errors='coerce')
     df['year'] = df['year'].fillna(0).astype(int)
     score = (df['price'] - df['price'].mean()) / df['price'].std() + (df['km'] - df['km'].mean()) / df['km'].std() + (df['year'] - df['year'].mean()) / df['year'].std()
     df['score'] = score
@@ -159,7 +166,6 @@ async def get_data_coches_net(make: str, model: str, yearMin: int, yearMax: int,
     response = requests.get(url_completa)
     data = response.json()
     df = pd.DataFrame(data['pills'])
-    # print(df.columns)
     return df
 
 async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
@@ -302,22 +308,19 @@ async def main_function():
                 raise ValueError("No se han encontrado coches con los criterios seleccionados.")
             df = df.sort_values(by='score', ascending=False)
             fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
+            fig.update_traces(marker=dict(size=12,
+                                          line=dict(width=2,
+                                                    color='DarkSlateGrey')),
+                              selector=dict(mode='markers'))
+            fig.update_layout(title='Scatter plot of cars data',
+                  xaxis_title='Price',
+                  yaxis_title='Km',
+                  clickmode='event+select')
+            fig.update_layout(legend_title_text='Año')
 
-            fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['image'])
-            fig.update_traces(hoverinfo='skip', selector=dict(mode='markers'))
-            fig.update_layout(clickmode='event+select')
-
-            def update_url(trace, points, selector):
-                if points.point_inds:
-                    url = trace.customdata[points.point_inds[0]]
-                    if url:
-                        import webbrowser
-                        webbrowser.open(url)
-
-            for trace in fig.data:
-                trace.on_click(update_url)
 
             df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
+            df['url'] = df['url'].apply(lambda x: f'<a href="{x}">{x}</a>')
             df_html = df.to_html(index=False,  escape=False)
             generate_html_file(df_html, fig.to_html())
         except ValueError as ve:
