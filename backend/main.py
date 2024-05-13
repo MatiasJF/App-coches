@@ -93,7 +93,7 @@ def transform_data(df_com, df_walla):
     df_walla = df_walla[[col for col in comon_names if col in df_walla.columns]]
     df_com = df_com[[col for col in comon_names if col in df_com.columns]]
 
-    df_walla['site'] = 'WallaPop'
+    df_walla['site'] = 'Wallapop'
 
     df_com['site'] = 'Coches.com'
 
@@ -212,7 +212,7 @@ def generate_html_file(df_html, scatter_plot_html):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Combined Cars Data</title>
+        <title>Búsqueda de vehículos</title>
         <style>
         body {{
             background-color: #f0f0f0;
