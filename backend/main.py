@@ -60,8 +60,6 @@ async def login(user: User):
     return
 
 def transform_data(df_com, df_walla):
-    same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower','web_slug']
-    same_columns_coches_com = ['id','image', 'price', 'url' , 'make', 'model' , 'fuel', 'cv', 'km', 'year']
     comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv','url']
     rename_columns = {
         'web_slug': 'url',
@@ -79,9 +77,17 @@ def transform_data(df_com, df_walla):
 
     df_walla.drop(columns=delete_columns, inplace=True, errors='ignore')
 
+    df_walla['price'] = df_walla['price'].fillna(0).replace({'€': '', '.': '', ',': '', ' ': ''}, regex=True)
+    df_walla['km'] = df_walla['km'].fillna(0).replace({'€': '', '.': '', ',': '', ' ': '' }, regex=True)
+    df_walla['price'] = pd.to_numeric(df_walla['price'])
+    df_walla['km'] = pd.to_numeric(df_walla['km'])
+
     df_com.rename(columns=rename_columns, inplace=True)
 
     df_com.drop(columns=delete_columns, inplace=True, errors='ignore')
+
+    df_com['price'] = df_com['price'].str.replace('€', '').str.replace('.', '').str.replace(',', '.').astype(float)
+    df_com['km'] = df_com['km'].str.replace(' km', '').str.replace('.', '').str.replace(',', '.').astype(float)
 
     df_walla = df_walla[[col for col in comon_names if col in df_walla.columns]]
     df_com = df_com[[col for col in comon_names if col in df_com.columns]]
@@ -91,11 +97,7 @@ def transform_data(df_com, df_walla):
     df_com['site'] = 'Coches.com'
 
     df = pd.concat([df_com, df_walla], ignore_index=True)
-    df['price'] = df['price'].fillna(0).replace({'€': '', '.': '', ',': '', '': 0}, regex=True)
-    df['km'] = df['km'].fillna(0).replace({'€': '', '.': '', ',': '','': 0 }, regex=True)
-    # pass price and km to numeric
-    df['price'] = pd.to_numeric(df['price'], errors='coerce')
-    df['km'] = pd.to_numeric(df['km'], errors='coerce')
+
     df['year'] = df['year'].fillna(0).astype(int)
     score = (df['price'] - df['price'].mean()) / df['price'].std() + (df['km'] - df['km'].mean()) / df['km'].std() + (df['year'] - df['year'].mean()) / df['year'].std()
     df['score'] = score
@@ -195,7 +197,6 @@ async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: i
     df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df3 = await get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df = transform_data(df , df3)
-    # apply lambda to convert nan to 'NO disponible'
     df['price'] = df['price'].apply(lambda x: 'No disponible' if pd.isna(x) else x)
     df['km'] = df['km'].apply(lambda x: 'No disponible' if pd.isna(x) else x)
     return df
