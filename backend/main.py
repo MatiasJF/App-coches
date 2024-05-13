@@ -36,7 +36,6 @@ def register(user: User):
     print("User registered")
     return
 
-
 async def login(user: User):
     with open('users.csv', 'r') as file:
         reader = csv.reader(file)
@@ -51,9 +50,9 @@ async def login(user: User):
             u2 = u2.decode('utf-8')[2:-1].encode('utf-8')
             if hashed_password == u2:
                 print("User logged in")
-                web = await main_function()
-                webbrowser.open(web)
+                await main_function()
                 return
+
             else:
                 print("Invalid password")
                 return
@@ -68,19 +67,21 @@ def get_url_com(id):
     return
 
 def transform_data(df_com, df_walla):
-    same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower']
+    same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower','web_slug']
     same_columns_coches_com = ['id','image', 'price', 'url' , 'make', 'model' , 'fuel', 'cv', 'km', 'year']
-    comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv']
+    comon_names = ['id','image','price','make','model','year','km','fuelType','horsepower','cv','url']
     rename_columns = {
+        'web_slug': 'url',
         'engine': 'fuelType',
         'fuel' : 'fuelType',
         'horsepower': 'cv',
         'brand' : 'make',
-        'images': 'image',
-        'url': 'link'
+        'images': 'image'
     }
-    delete_columns = ['title', 'url']
+    delete_columns = ['title']
     df_walla['images'] = df_walla['images'].apply(lambda x: x[0]['original'] if isinstance(x, list) and len(x) > 0 else None)
+    df_walla['web_slug'] = 'https://es.wallapop.com/item/' + df_walla['web_slug'].astype(str)
+
     df_walla.rename(columns=rename_columns, inplace=True)
 
     df_walla.drop(columns=delete_columns, inplace=True, errors='ignore')
@@ -91,12 +92,17 @@ def transform_data(df_com, df_walla):
 
     df_walla = df_walla[[col for col in comon_names if col in df_walla.columns]]
     df_com = df_com[[col for col in comon_names if col in df_com.columns]]
-    df_walla['site'] = 'walla'
-    df_com['site'] = 'com'
-    print(len(df_walla)), print(len(df_com))
+
+    df_walla['site'] = 'WallaPop'
+
+    df_com['site'] = 'Coches.com'
+
     df = pd.concat([df_com, df_walla], ignore_index=True)
-    df['price'] = df['price'].fillna(0).replace({'\€': '', '\.': '', ',': ''}, regex=True).astype(int)
-    df['km'] = df['km'].fillna(0).replace({'\€': '', '\.': '', ',': ''}, regex=True).astype(int)
+    df['price'] = df['price'].fillna(0).replace({'€': '', '.': '', ',': '', '': 0}, regex=True)
+    df['km'] = df['km'].fillna(0).replace({'€': '', '.': '', ',': '','': 0 }, regex=True)
+    # pass price and km to numeric
+    df['price'] = pd.to_numeric(df['price'], errors='coerce')
+    df['km'] = pd.to_numeric(df['km'], errors='coerce')
     df['year'] = df['year'].fillna(0).astype(int)
     score = (df['price'] - df['price'].mean()) / df['price'].std() + (df['km'] - df['km'].mean()) / df['km'].std() + (df['year'] - df['year'].mean()) / df['year'].std()
     df['score'] = score
@@ -160,7 +166,6 @@ async def get_data_coches_net(make: str, model: str, yearMin: int, yearMax: int,
     response = requests.get(url_completa)
     data = response.json()
     df = pd.DataFrame(data['pills'])
-    # print(df.columns)
     return df
 
 async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
@@ -196,51 +201,141 @@ async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, k
 async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df3 = await get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-    df = transform_data(df , df3)
     if len(df) == 0:
         print('No data found')
         return
+    df = transform_data(df , df3)
     return df
+
+def generate_html_file(df_html, scatter_plot_html):
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Combined Cars Data</title>
+        <style>
+        body {{
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+
+        h1 {{
+            text-align: center;
+            color: #333;
+        }}
+
+        table {{
+            width: 80%;
+            border-collapse: collapse;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }}
+
+        th,
+        td {{
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }}
+
+        th {{
+            background-color: #f2f2f2;
+        }}
+
+        tr:hover {{
+            background-color: #f5f5f5;
+        }}
+
+        .scatter-plot {{
+            width: 80%;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }}
+    </style>
+
+    </head>
+    <body>
+        <h1>DataFrame</h1>
+        {df_html}
+        <h1>Scatter Plot</h1>
+        <div class="scatter-plot">
+            {scatter_plot_html}
+        </div>
+    </body>
+    </html>
+    """
+
+    with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+    webbrowser.open('combined_cars_data.html')
+
 
 
 async def main_function():
-    make = input("Enter make: ")
-    model = input("Enter model: ")
-    yearMin = int(input("Enter min year: "))
-    yearMax = int(input("Enter max year: "))
-    kmMin = int(input("Enter min km: "))
-    kmMax = int(input("Enter max km: "))
-    priceMin = int(input("Enter min price: "))
-    priceMax = int(input("Enter max price: "))
-    df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
-    print('Encontrados ' + str(len(df)) + ' coches')
+    while True:
+        try:
+            make = input("Elige la marca (e.g., Audi): ")
+            model = input("Elige el modelo (e.g., A3): ")
+            yearMin = int(input("Elige el año mínimo (e.g., 2000): "))
+            yearMax = int(input("Elige el año máximo (e.g., 2022): "))
+            kmMin = int(input("Elije el minimo kilometraje (e.g., 0): "))
+            kmMax = int(input("Elije el maximo kilometraje (e.g., 1000000): "))
+            priceMin = int(input("Elije el precio mínimo (e.g., 0): "))
+            priceMax = int(input("Elige el precio máximo (e.g., 100000): "))
 
-    df = df.sort_values(by='score', ascending=False)
-    fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
+            if yearMin < 0 or yearMax < 0 or kmMin < 0 or kmMax < 0 or priceMin < 0 or priceMax < 0:
+                raise ValueError("Los valores de precio, año y kilometraje no pueden ser negativos.")
+            if yearMin > yearMax:
+                raise ValueError("El año minimo no puede ser mayor que el año maximo.")
+            if kmMin > kmMax:
+                raise ValueError("El kilometro minimo no puede ser mayor que el kilometro maximo.")
+            if priceMin > priceMax:
+                raise ValueError("El precio minimo no puede ser mayor que el precio maximo.")
+            df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
 
-    fig.update_traces(marker=dict(size=12, opacity=0.8), selector=dict(mode='markers'), customdata=df['image'])
-    fig.update_traces(hoverinfo='skip', selector=dict(mode='markers'))
-    fig.update_layout(clickmode='event+select')
+            df = df[(df['make'].str.lower().str.contains(make.lower())) & (df['model'].str.lower().str.contains(model.lower()))]
 
-    def update_url(trace, points, selector):
-        if points.point_inds:
-            url = trace.customdata[points.point_inds[0]]
-            if url:
-                import webbrowser
-                webbrowser.open(url)
+            print('Encontrados ' + str(len(df)) + ' coches')
+            if len(df) == 0:
+                raise ValueError("No se han encontrado coches con los criterios seleccionados.")
+            df = df.sort_values(by='score', ascending=False)
+            fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
+            fig.update_traces(marker=dict(size=12,
+                                          line=dict(width=2,
+                                                    color='DarkSlateGrey')),
+                              selector=dict(mode='markers'))
+            fig.update_layout(title='Scatter plot of cars data',
+                  xaxis_title='Price',
+                  yaxis_title='Km',
+                  clickmode='event+select')
+            fig.update_layout(legend_title_text='Año')
 
-    for trace in fig.data:
-        trace.on_click(update_url)
 
-    df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
-    df_html = df.to_html(index=False,  escape=False)
+            df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
+            df['url'] = df['url'].apply(lambda x: f'<a href="{x}">{x}</a>')
+            df_html = df.to_html(index=False,  escape=False)
+            generate_html_file(df_html, fig.to_html())
+        except ValueError as ve:
+            print(f"Invalid input: {ve}")
 
-    combined_html = f"<h1>DataFrame</h1>{df_html}<h1>Scatter Plot</h1>{fig.to_html()}"
-
-    with open('combined_cars_data.html', 'w', encoding='utf-8') as f:
-        f.write(combined_html)
-
-    return 'combined_cars_data.html'
+        webbrowser.open('combined_cars_data.html')
+        print("1. Logout")
+        print("2. Continuar Buscando")
+        option = input("Elige una opción: ")
+        if option == "1":
+            return
+        if option == "2":
+            web = await main_function()
+        else:
+            return
 
 
 async def main_menu():
