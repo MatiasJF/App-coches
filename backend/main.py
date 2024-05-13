@@ -201,10 +201,10 @@ async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, k
 async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     df = await get_data_coches_com(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
     df3 = await get_data_wallapop(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax)
-    if len(df) == 0:
-        print('No data found')
-        return
     df = transform_data(df , df3)
+    # apply lambda to convert nan to 'NO disponible'
+    df['price'] = df['price'].apply(lambda x: 'No disponible' if pd.isna(x) else x)
+    df['km'] = df['km'].apply(lambda x: 'No disponible' if pd.isna(x) else x)
     return df
 
 def generate_html_file(df_html, scatter_plot_html):
@@ -262,9 +262,9 @@ def generate_html_file(df_html, scatter_plot_html):
 
     </head>
     <body>
-        <h1>DataFrame</h1>
+        <h1>Resultados</h1>
         {df_html}
-        <h1>Scatter Plot</h1>
+        <h1>Scatter plot</h1>
         <div class="scatter-plot">
             {scatter_plot_html}
         </div>
@@ -286,24 +286,24 @@ async def main_function():
             model = input("Elige el modelo (e.g., A3): ")
             yearMin = int(input("Elige el año mínimo (e.g., 2000): "))
             yearMax = int(input("Elige el año máximo (e.g., 2022): "))
-            kmMin = int(input("Elije el minimo kilometraje (e.g., 0): "))
-            kmMax = int(input("Elije el maximo kilometraje (e.g., 1000000): "))
+            kmMin = int(input("Elije el mínimo kilometraje (e.g., 0): "))
+            kmMax = int(input("Elije el máximo kilometraje (e.g., 1000000): "))
             priceMin = int(input("Elije el precio mínimo (e.g., 0): "))
             priceMax = int(input("Elige el precio máximo (e.g., 100000): "))
 
             if yearMin < 0 or yearMax < 0 or kmMin < 0 or kmMax < 0 or priceMin < 0 or priceMax < 0:
                 raise ValueError("Los valores de precio, año y kilometraje no pueden ser negativos.")
             if yearMin > yearMax:
-                raise ValueError("El año minimo no puede ser mayor que el año maximo.")
+                raise ValueError("El año mínimo no puede ser mayor que el año maximo.")
             if kmMin > kmMax:
-                raise ValueError("El kilometro minimo no puede ser mayor que el kilometro maximo.")
+                raise ValueError("El kilometro mínimo no puede ser mayor que el kilometro maximo.")
             if priceMin > priceMax:
-                raise ValueError("El precio minimo no puede ser mayor que el precio maximo.")
+                raise ValueError("El precio mínimo no puede ser mayor que el precio maximo.")
             df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
 
             df = df[(df['make'].str.lower().str.contains(make.lower())) & (df['model'].str.lower().str.contains(model.lower()))]
 
-            print('Encontrados ' + str(len(df)) + ' coches')
+            print('Se han encontrado ' + str(len(df)) + ' coches')
             if len(df) == 0:
                 raise ValueError("No se han encontrado coches con los criterios seleccionados.")
             df = df.sort_values(by='score', ascending=False)
@@ -312,23 +312,23 @@ async def main_function():
                                           line=dict(width=2,
                                                     color='DarkSlateGrey')),
                               selector=dict(mode='markers'))
-            fig.update_layout(title='Scatter plot of cars data',
-                  xaxis_title='Price',
+            fig.update_layout(title='Scatter plot de los coches encontrados',
+                  xaxis_title='Precio',
                   yaxis_title='Km',
                   clickmode='event+select')
             fig.update_layout(legend_title_text='Año')
 
 
-            df['image'] = df['image'].apply(lambda x: f'<a href="{x}">{x}</a>')
-            df['url'] = df['url'].apply(lambda x: f'<a href="{x}">{x}</a>')
+            df['image'] = df['image'].apply(lambda x: f'<a href="{x}">Link a la imagen</a>')
+            df['url'] = df['url'].apply(lambda x: f'<a href="{x}">Link al anuncio</a>')
             df_html = df.to_html(index=False,  escape=False)
             generate_html_file(df_html, fig.to_html())
         except ValueError as ve:
             print(f"Invalid input: {ve}")
 
         webbrowser.open('combined_cars_data.html')
-        print("1. Logout")
-        print("2. Continuar Buscando")
+        print("1. Log out")
+        print("2. Continuar buscando")
         option = input("Elige una opción: ")
         if option == "1":
             return
@@ -341,7 +341,7 @@ async def main_function():
 async def main_menu():
     while True:
         print("1. Register")
-        print("2. Login")
+        print("2. Log in")
         print("3. Exit")
         option = input("Choose an option: ")
         if option == "1":
