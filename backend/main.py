@@ -99,8 +99,30 @@ def transform_data(df_com, df_walla):
     df = pd.concat([df_com, df_walla], ignore_index=True)
 
     df['year'] = df['year'].fillna(0).astype(int)
-    score = (df['price'] - df['price'].mean()) / df['price'].std() + (df['km'] - df['km'].mean()) / df['km'].std() + (df['year'] - df['year'].mean()) / df['year'].std()
-    df['score'] = score
+    peso_price = 0.5
+    peso_km = 0.3
+    peso_year = -0.2
+    mean_price = df['price'].mean()
+    std_price = df['price'].std()
+    mean_km = df['km'].mean()
+    std_km = df['km'].std()
+    mean_year = df['year'].mean()
+    std_year = df['year'].std()
+
+    score_price = ((df['price'] - mean_price) / std_price) * peso_price
+    score_km = ((df['km'] - mean_km) / std_km) * peso_km
+    score_year = ((df['year'] - mean_year) / std_year) * peso_year
+
+    # Suma los valores ponderados
+    total_score = score_price + score_km + score_year
+
+    # Escala el resultado para que esté en el rango de 0 a 1
+    min_score = total_score.min()
+    max_score = total_score.max()
+    scaled_score = (total_score - min_score) / (max_score - min_score)
+
+    # Asigna el resultado al DataFrame original
+    df['score'] = scaled_score
     return df
 
 
