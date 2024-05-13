@@ -2,26 +2,62 @@
 
 
 
+# Herramienta de Búsqueda de Coches de Segunda Mano
 
-## App-Coches
+Esta herramienta es una aplicación que permite buscar coches de segunda mano en sitios web populares como coches.com y wallapop. Proporciona visualizaciones de datos y la capacidad de asignar puntajes a los coches para agregar valor a los datos.
 
-### Descripción
+## Cómo Funciona
 
-Este proyecto pretende el tratado en tiempo real de datos de anuncios de coches de segunda mano provenientes
-de paginas web como milanuncios, autoscout24, coches.net, vibbo, wallapop, etc para poder generar visualizaciones
-y analisis de los datos para poder encontrar las mejores ofertas de coches de segunda mano.
+La herramienta recopila datos de coches de segunda mano de varios sitios web utilizando técnicas de web scraping. Luego, estos datos se procesan y se muestran en una interfaz de usuario amigable. Los usuarios pueden filtrar y buscar coches según sus preferencias y ver visualizaciones de datos para ayudar en su decisión de compra.
 
-La aplicación se divide en dos partes: la parte del servidor y la parte del
-cliente. La parte del servidor se encarga de la recopilación de datos y la
-parte del cliente se encarga de la visualización de los datos.
+Además, los usuarios tienen la opción de asignar puntajes a los coches en función de diferentes criterios como precio, kilometraje, año, etc. Estos puntajes se utilizan para clasificar y destacar los coches que mejor se ajusten a las preferencias del usuario.
 
-#### Servidor (NodeJS)
-El servidor es una API RESTful que permite a otros programas acceder a los
-datos de manera segura y eficiente. Está desarrollada con NodeJS, un
-entorno de ejecución para JavaScript que permite ejecutar código JavaScript
-en el servidor. La API RESTful se comunica con una base de datos MongoDB
-para almacenar los datos. Los endpoints disponibles son:
+## Requisitos
 
+- Python 3.9: [Descargar](https://www.python.org/downloads/)
+- pip (se incluye con la instalación de Python)
+
+## Instalación
+
+1. Clona este repositorio en tu máquina local:
+
+```bash
+git clone https://github.com/tu_usuario/herramienta-busqueda-coches.git
+cd herramienta-busqueda-coches
+```
+
+2. Crear un entorno virtual
+
+# En Windows
+```bash
+python -m venv venv
+```
+
+# En Mac/Linux
+```bash
+python3 -m venv venv
+```
+3. Activar el entorno virtual
+
+# En Windows
+```bash
+venv\Scripts\activate
+```
+
+# En Mac/Linux
+```bash
+source venv/bin/activate
+```
+4. Dirigirse a la carpeta backend e instalar las librerias necesarias
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+5. Ejecutar el archivo
+```bash
+python main.py
+```
 
 
 
