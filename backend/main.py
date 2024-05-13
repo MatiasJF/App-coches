@@ -59,13 +59,6 @@ async def login(user: User):
     print("User not registered")
     return
 
-def get_url_walla(id):
-
-    return
-
-def get_url_com(id):
-    return
-
 def transform_data(df_com, df_walla):
     same_columns_wallapop = ['id', 'title', 'images', 'price', 'brand', 'model', 'year', 'km', 'engine', 'horsepower','web_slug']
     same_columns_coches_com = ['id','image', 'price', 'url' , 'make', 'model' , 'fuel', 'cv', 'km', 'year']
