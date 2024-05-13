@@ -77,8 +77,8 @@ def transform_data(df_com, df_walla):
 
     df_walla.drop(columns=delete_columns, inplace=True, errors='ignore')
 
-    df_walla['price'] = df_walla['price'].fillna(0).replace({'€': '', '.': '', ',': '', ' ': ''}, regex=True)
-    df_walla['km'] = df_walla['km'].fillna(0).replace({'€': '', '.': '', ',': '', ' ': '' }, regex=True)
+    df_walla['price'] = df_walla['price'].replace({'€': '', '.': '', ',': '', ' ': ''}, regex=True)
+    df_walla['km'] = df_walla['km'].replace({'€': '', '.': '', ',': '', ' ': '' }, regex=True)
     df_walla['price'] = pd.to_numeric(df_walla['price'])
     df_walla['km'] = pd.to_numeric(df_walla['km'])
 
