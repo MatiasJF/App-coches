@@ -330,7 +330,7 @@ async def main_function():
                                           line=dict(width=2,
                                                     color='DarkSlateGrey')),
                               selector=dict(mode='markers'))
-            fig.update_layout(title='Diagrama dispersión de los coches encontrados',
+            fig.update_layout(title='Diagrama de dispersión de los coches encontrados',
                   xaxis_title='Precio',
                   yaxis_title='Km',
                   clickmode='event+select')
