@@ -4,6 +4,7 @@ import urllib.parse
 import matplotlib.pyplot as plt
 import plotly.express as px
 from IPython.display import HTML
+import platform
 import webbrowser
 import csv
 import bcrypt
@@ -347,9 +348,14 @@ async def main_function():
         except ValueError as ve:
             print(f"Entrada no válida: {ve}")
         abs_path = os.path.abspath('combined_cars_data.html')
-        abs_path = 'file://' + abs_path
-        webbrowser.open(abs_path)
-        webbrowser.get('safari').open(abs_path)
+        if platform.system() == 'Windows':
+            webbrowser.open(abs_path)
+        if platform.system() == 'Darwin':
+            abs_path = 'file://' + abs_path
+            webbrowser.get('safari').open(abs_path)
+        else:
+            abs_path = 'file://' + abs_path
+            webbrowser.get('firefox').open(abs_path)
         print("1. Cerrar sesión\n")
         print("2. Continuar buscando\n")
         option = input("Elige una opción: \n")
@@ -370,6 +376,7 @@ async def main_menu():
         print("2. Iniciar sesión\n")
         print("3. Salir\n")
         option = input("Elegir una opción:")
+        print("\n")
         if option == "1":
             username = input("Introducir nombre de usuario: ")
             print("\n")
