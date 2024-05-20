@@ -22,8 +22,7 @@ Además, los usuarios tienen la opción de asignar puntajes a los coches en func
 1. Clona este repositorio en tu máquina local:
 
 ```bash
-git clone https://github.com/tu_usuario/herramienta-busqueda-coches.git
-cd herramienta-busqueda-coches
+git clone https://github.com/MatiasJF/app-coches.git
 ```
 
 2. Crear un entorno virtual
