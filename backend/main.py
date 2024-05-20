@@ -23,7 +23,7 @@ def register(user: User):
     if len(users) != 0:
         for u in users:
             if user.username == u[0]:
-                print("User already registered")
+                print("Usuario ya registrado")
                 return
 
     # Genera una nueva sal para cada usuario
@@ -33,7 +33,7 @@ def register(user: User):
     with open('users.csv', 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([user.username, salt, hashed_password])
-    print("User registered")
+    print("Usuario registrado")
     return
 
 async def login(user: User):
@@ -49,14 +49,14 @@ async def login(user: User):
             u2 = bytes(u[2], 'utf-8')
             u2 = u2.decode('utf-8')[2:-1].encode('utf-8')
             if hashed_password == u2:
-                print("User logged in")
+                print("Sesión iniciada con éxito")
                 await main_function()
                 return
 
             else:
-                print("Invalid password")
+                print("Contraseña incorrecta")
                 return
-    print("User not registered")
+    print("Usuario no registrado")
     return
 
 def transform_data(df_com, df_walla):
@@ -122,7 +122,7 @@ def transform_data(df_com, df_walla):
     scaled_score = (total_score - min_score) / (max_score - min_score)
 
     # Asigna el resultado al DataFrame original
-    df['score'] = scaled_score
+    df['score'] = round(scaled_score,4)
     return df
 
 
@@ -221,6 +221,8 @@ async def search_car(make: str, model: str, yearMin: int, yearMax: int, kmMin: i
     df = transform_data(df , df3)
     df['price'] = df['price'].apply(lambda x: 'No disponible' if pd.isna(x) else x)
     df['km'] = df['km'].apply(lambda x: 'No disponible' if pd.isna(x) else x)
+    df['fuelType'] = df['fuelType'].apply(lambda x: 'No disponible' if pd.isna(x) else x)
+
     return df
 
 def generate_html_file(df_html, scatter_plot_html):
@@ -280,7 +282,7 @@ def generate_html_file(df_html, scatter_plot_html):
     <body>
         <h1>Resultados</h1>
         {df_html}
-        <h1>Scatter plot</h1>
+        <h1>Diagrama de dispersión</h1>
         <div class="scatter-plot">
             {scatter_plot_html}
         </div>
@@ -298,14 +300,14 @@ def generate_html_file(df_html, scatter_plot_html):
 async def main_function():
     while True:
         try:
-            make = input("Elige la marca (e.g., Audi): ")
-            model = input("Elige el modelo (e.g., A3): ")
-            yearMin = int(input("Elige el año mínimo (e.g., 2000): "))
-            yearMax = int(input("Elige el año máximo (e.g., 2022): "))
-            kmMin = int(input("Elije el mínimo kilometraje (e.g., 0): "))
-            kmMax = int(input("Elije el máximo kilometraje (e.g., 1000000): "))
-            priceMin = int(input("Elije el precio mínimo (e.g., 0): "))
-            priceMax = int(input("Elige el precio máximo (e.g., 100000): "))
+            make = input("Elige la marca (por ejemplo, Audi): ")
+            model = input("Elige el modelo (por ejemplo, A3): ")
+            yearMin = int(input("Elige el año mínimo (por ejemplo, 2000): "))
+            yearMax = int(input("Elige el año máximo (por ejemplo, 2022): "))
+            kmMin = int(input("Elige el kilometraje mínimo (por ejemplo, 0): "))
+            kmMax = int(input("Elige el kilometraje máximo (por ejemplo, 1000000): "))
+            priceMin = int(input("Elige el precio mínimo (por ejemplo, 0): "))
+            priceMax = int(input("Elige el precio máximo (por ejemplo, 100000): "))
 
             if yearMin < 0 or yearMax < 0 or kmMin < 0 or kmMax < 0 or priceMin < 0 or priceMax < 0:
                 raise ValueError("Los valores de precio, año y kilometraje no pueden ser negativos.")
@@ -328,7 +330,7 @@ async def main_function():
                                           line=dict(width=2,
                                                     color='DarkSlateGrey')),
                               selector=dict(mode='markers'))
-            fig.update_layout(title='Scatter plot de los coches encontrados',
+            fig.update_layout(title='Diagrama de dispersión de los coches encontrados',
                   xaxis_title='Precio',
                   yaxis_title='Km',
                   clickmode='event+select')
@@ -337,22 +339,14 @@ async def main_function():
 
             df['image'] = df['image'].apply(lambda x: f'<a href="{x}">Link a la imagen</a>')
             df['url'] = df['url'].apply(lambda x: f'<a href="{x}">Link al anuncio</a>')
+            df.rename(columns={'id': 'ID', 'image': 'Imagen', 'make': 'Marca', 'model': 'Modelo', 'year': 'Año', 'km': 'Km', 'fuelType': 'Combustible', 'cv': 'CV', 'price': 'Precio', 'url': 'Enlace', 'site': 'Página del anuncio', 'score': 'Puntuación'}, inplace=True)
             df_html = df.to_html(index=False,  escape=False)
             generate_html_file(df_html, fig.to_html())
         except ValueError as ve:
-            print(f"Invalid input: {ve}")
-        path = 'combined_cars_data.html'
-        path = os.path.abspath(path)
-        print(path)
-        try:
-            webbrowser.open('combined_cars_data.html')
-        except Exception as e:
-            e = str(e)
-        try:
-            webbrowser.get('safari').open(path)
-        except Exception as e:
-            e = str(e)
-        print("1. Log out")
+            print(f"Entrada no válida: {ve}")
+
+        webbrowser.open('combined_cars_data.html')
+        print("1. Cerrar sesión")
         print("2. Continuar buscando")
         option = input("Elige una opción: ")
         if option == "1":
@@ -365,24 +359,27 @@ async def main_function():
 
 async def main_menu():
     while True:
-        print("1. Register")
-        print("2. Log in")
-        print("3. Exit")
-        option = input("Choose an option: ")
+        print('-----------------------------------')
+        print("Menú principal")
+        print('-----------------------------------')
+        print("1. Registrarse")
+        print("2. Iniciar sesión")
+        print("3. Salir")
+        option = input("Elegir una opción: ")
         if option == "1":
-            username = input("Enter username: ")
-            password = input("Enter password: ")
+            username = input("Introducir nombre de usuario: ")
+            password = input("Introducir contraseña: ")
             user = User(username=username, password=password)
             register(user)
         elif option == "2":
-            username = input("Enter username: ")
-            password = input("Enter password: ")
+            username = input("Introducir nombre de usuario: ")
+            password = input("Introducir contraseña: ")
             user = User(username=username, password=password)
             await login(user)
         elif option == "3":
             break
         else:
-            print("Invalid option")
+            print("Opción no válida")
 
 
 if __name__ == "__main__":
