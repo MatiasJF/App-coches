@@ -10,6 +10,8 @@ import bcrypt
 import asyncio
 import os
 
+pd.options.mode.chained_assignment = None
+
 class User():
     def __init__(self, username, password):
         self.username = username
@@ -23,7 +25,7 @@ def register(user: User):
     if len(users) != 0:
         for u in users:
             if user.username == u[0]:
-                print("Usuario ya registrado")
+                print("Usuario ya registrado \n")
                 return
 
     # Genera una nueva sal para cada usuario
@@ -33,7 +35,7 @@ def register(user: User):
     with open('users.csv', 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([user.username, salt, hashed_password])
-    print("Usuario registrado")
+    print("Usuario registrado\n")
     return
 
 async def login(user: User):
@@ -49,14 +51,14 @@ async def login(user: User):
             u2 = bytes(u[2], 'utf-8')
             u2 = u2.decode('utf-8')[2:-1].encode('utf-8')
             if hashed_password == u2:
-                print("Sesión iniciada con éxito")
+                print("Sesión iniciada con éxito\n")
                 await main_function()
                 return
 
             else:
-                print("Contraseña incorrecta")
+                print("Contraseña incorrecta\n")
                 return
-    print("Usuario no registrado")
+    print("Usuario no registrado\n")
     return
 
 def transform_data(df_com, df_walla):
@@ -307,23 +309,23 @@ async def main_function():
             kmMin = int(input("Elige el kilometraje mínimo (por ejemplo, 0): "))
             kmMax = int(input("Elige el kilometraje máximo (por ejemplo, 1000000): "))
             priceMin = int(input("Elige el precio mínimo (por ejemplo, 0): "))
-            priceMax = int(input("Elige el precio máximo (por ejemplo, 100000): "))
+            priceMax = int(input("Elige el precio máximo (por ejemplo, 100000):"))
 
             if yearMin < 0 or yearMax < 0 or kmMin < 0 or kmMax < 0 or priceMin < 0 or priceMax < 0:
-                raise ValueError("Los valores de precio, año y kilometraje no pueden ser negativos.")
+                raise ValueError("Los valores de precio, año y kilometraje no pueden ser negativos.\n")
             if yearMin > yearMax:
-                raise ValueError("El año mínimo no puede ser mayor que el año maximo.")
+                raise ValueError("El año mínimo no puede ser mayor que el año maximo.\n")
             if kmMin > kmMax:
-                raise ValueError("El kilometro mínimo no puede ser mayor que el kilometro maximo.")
+                raise ValueError("El kilometro mínimo no puede ser mayor que el kilometro maximo.\n")
             if priceMin > priceMax:
-                raise ValueError("El precio mínimo no puede ser mayor que el precio maximo.")
+                raise ValueError("El precio mínimo no puede ser mayor que el precio maximo.\n")
             df = pd.DataFrame(await search_car(make, model, yearMin, yearMax, kmMin, kmMax, priceMin, priceMax))
 
             df = df[(df['make'].str.lower().str.contains(make.lower())) & (df['model'].str.lower().str.contains(model.lower()))]
 
-            print('Se han encontrado ' + str(len(df)) + ' coches')
+            print('Se han encontrado ' + str(len(df)) + ' coches\n')
             if len(df) == 0:
-                raise ValueError("No se han encontrado coches con los criterios seleccionados.")
+                raise ValueError("No se han encontrado coches con los criterios seleccionados.\n")
             df = df.sort_values(by='score', ascending=False)
             fig = px.scatter(df, x='price', y='km', color='year', hover_data=['year', 'km', 'price'])
             fig.update_traces(marker=dict(size=12,
@@ -344,11 +346,13 @@ async def main_function():
             generate_html_file(df_html, fig.to_html())
         except ValueError as ve:
             print(f"Entrada no válida: {ve}")
-
-        webbrowser.open('combined_cars_data.html')
-        print("1. Cerrar sesión")
-        print("2. Continuar buscando")
-        option = input("Elige una opción: ")
+        abs_path = os.path.abspath('combined_cars_data.html')
+        abs_path = 'file://' + abs_path
+        webbrowser.open(abs_path)
+        webbrowser.get('safari').open(abs_path)
+        print("1. Cerrar sesión\n")
+        print("2. Continuar buscando\n")
+        option = input("Elige una opción: \n")
         if option == "1":
             return
         if option == "2":
@@ -361,25 +365,29 @@ async def main_menu():
     while True:
         print('-----------------------------------')
         print("Menú principal")
-        print('-----------------------------------')
-        print("1. Registrarse")
-        print("2. Iniciar sesión")
-        print("3. Salir")
-        option = input("Elegir una opción: ")
+        print('-----------------------------------\n')
+        print("1. Registrarse\n")
+        print("2. Iniciar sesión\n")
+        print("3. Salir\n")
+        option = input("Elegir una opción:")
         if option == "1":
             username = input("Introducir nombre de usuario: ")
+            print("\n")
             password = input("Introducir contraseña: ")
+            print("\n")
             user = User(username=username, password=password)
             register(user)
         elif option == "2":
             username = input("Introducir nombre de usuario: ")
+            print("\n")
             password = input("Introducir contraseña: ")
+            print("\n")
             user = User(username=username, password=password)
             await login(user)
         elif option == "3":
             break
         else:
-            print("Opción no válida")
+            print("Opción no válida\n")
 
 
 if __name__ == "__main__":
