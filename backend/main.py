@@ -8,7 +8,7 @@ import webbrowser
 import csv
 import bcrypt
 import asyncio
-
+import os
 
 class User():
     def __init__(self, username, password):
@@ -341,8 +341,17 @@ async def main_function():
             generate_html_file(df_html, fig.to_html())
         except ValueError as ve:
             print(f"Invalid input: {ve}")
-
-        webbrowser.open('combined_cars_data.html')
+        path = 'combined_cars_data.html'
+        path = os.path.abspath(path)
+        print(path)
+        try:
+            webbrowser.open('combined_cars_data.html')
+        except Exception as e:
+            e = str(e)
+        try:
+            webbrowser.get('safari').open(path)
+        except Exception as e:
+            e = str(e)
         print("1. Log out")
         print("2. Continuar buscando")
         option = input("Elige una opción: ")
