@@ -23,7 +23,6 @@ Además, los usuarios tienen la opción de asignar puntajes a los coches en func
 
 ```bash
 git clone https://github.com/MatiasJF/app-coches.git
-cd backend
 ```
 
 2. Crear un entorno virtual
