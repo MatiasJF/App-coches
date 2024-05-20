@@ -116,15 +116,12 @@ def transform_data(df_com, df_walla):
     score_km = ((df['km'] - mean_km) / std_km) * peso_km
     score_year = ((df['year'] - mean_year) / std_year) * peso_year
 
-    # Suma los valores ponderados
     total_score = score_price + score_km + score_year
 
-    # Escala el resultado para que esté en el rango de 0 a 1
     min_score = total_score.min()
     max_score = total_score.max()
     scaled_score = (total_score - min_score) / (max_score - min_score)
 
-    # Asigna el resultado al DataFrame original
     df['score'] = round(scaled_score,4)
     return df
 
@@ -190,18 +187,18 @@ async def get_data_coches_net(make: str, model: str, yearMin: int, yearMax: int,
 
 async def get_data_wallapop(make: str, model: str, yearMin: int, yearMax: int, kmMin: int, kmMax: int, priceMin: int, priceMax: int):
     parametros = {
-    'filters_source': 'suggester',
-    'keywords': make + ' ' + model,
-    'category_ids': 100,
-    'longitude': -3.69196,
-    'latitude': 40.41956,
-    'yearMin': yearMin,
-    'yearMax': yearMax,
-    'kmMin': kmMin,
-    'kmMax': kmMax,
-    'priceMin': priceMin,
-    'priceMax': priceMax
-}
+        'min_year': yearMin,
+        'max_year': yearMax,
+        'min_km': kmMin,
+        'max_km': kmMax,
+        'min_sale_price': priceMin,
+        'max_sale_price': priceMax,
+        'filters_source': 'quick_filters',
+        'keywords': make + ' ' + model,
+        'category_ids': '100',
+        'longitude': '-3.69196',
+        'latitude': '40.41956'
+    }
     url_base = 'https://api.wallapop.com/api/v3/cars/search?'
     url_completa = url_base + urllib.parse.urlencode(parametros)
     response = requests.get(url_completa)
